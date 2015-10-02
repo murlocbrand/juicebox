@@ -1,3 +1,4 @@
+// Copyright 2015 Axel Smeets
 var request = require('request'),
     express = require('express')
 
