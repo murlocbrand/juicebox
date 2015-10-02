@@ -37,6 +37,10 @@ curl localhost:8888/queue | jq
 
 ## supported urls
  - youtube (youtube.com/watch?v=olala)
+ - bandcamp (bandcamp.com/album/yayaya | bandcamp.com/track/nanana )
+
+## special urls
+ - bandcamp mp3 urls (popplers5.bandcamp.com)
 
 ## license
 MIT
