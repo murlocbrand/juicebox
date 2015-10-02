@@ -9,7 +9,7 @@ var player = require('./internals').player
 var plugins = require('./plugins')
 var preprocessors = require('./preprocessors')
 
-var queue = [], track = -1
+var queue = []
 try {
 	queue = JSON.parse(fs.readFileSync('queue.json'))
 	console.log('read', queue.length, 'tracks from queue.json')
@@ -52,10 +52,8 @@ function onEnd () {
 		return
 	}
 
-	var nextIndex  = (track + 1) % queue.length
-	track = nextIndex
-
-	var next = queue[nextIndex]
+	// currently playing is always index 0
+	var next = queue[0]
 	var plugin
 	for (var i = 0; i < plugins.length; i++) {
 		plugin = plugins[i]
@@ -78,7 +76,10 @@ function onEnd () {
 		// forcibly kill it when track is done. It doesn't matter
 		// by which reason the process is killed, so just go next.
 		player.process().on('exit', function () {
-			console.log('player exited', nextIndex, thisId)
+			console.log('player exited',  thisId)
+			// Push the track we just played onto the queue tail to
+			// get a circular, 0-is-current play queue.
+			queue.push(queue.shift())
 			onEnd()
 		})	
 	
@@ -97,15 +98,15 @@ function onEnd () {
 				// If the plugin killed the player we'd start a
 				// chain reaction of process killing.
 				if (thisId === currentId) {
-					console.log('plugin exited in time', nextIndex, thisId)
+					console.log('plugin exited in time', thisId)
 					player.stop()
 				} else {
-					console.log('plugin exited too late', nextIndex, thisId)
+					console.log('plugin exited too late', thisId)
 				}
 			})
 			.pipe(player.process().stdin)
 
-		console.log('streaming', nextIndex, '(' + thisId + ')')
+		console.log('streaming', '(' + thisId + ')')
 	} else {
 		// If we didn't find a plugin to play this track, then skip it.
 		onEnd()
@@ -127,7 +128,7 @@ app.get('/', function (req, res) {
 	}
 	res.write('\n')
 
-	res.write('in queue: ')
+	res.write('in play queue: ')
 	if (queue.length === 0)
 		res.write('empty')
 	else {
@@ -179,7 +180,7 @@ app.post('/queue', function (req, res) {
 	if (!preprocessed) {
 		queue.push(req.body.url)
 
-		if (track === -1 && !player.playing())
+		if (queue.length === 1 && !player.playing())
 			onEnd()
 		
 		fs.writeFile('queue.json', JSON.stringify(queue), function (err) {
