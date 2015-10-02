@@ -1,20 +1,26 @@
-// NOT YET TESTED
-var req = require('request')
+var request = require('request')
 
 function isBandcampURL (url) {
-	// TODO: Allow bandcamp.com links as well (not just poppler)
-	return url.indexOf("bandcamp") >= 0 || url.indexOf("poppler") > 0
+	return url.indexOf("popplers") >= 0
 }
 
-function stream (url) {
-	// Fix url if prefixed (piratradio)
-	url = url.replace('bandcamp', '')
+function stream (url, callback) {
+	return request
+		.get(url)
+		.on('response', function (res) {
+			var size = res.headers['content-length']
 
-	return { stdout: req(url) }
+			// sec = size_bits / bits_per_sec
+			// bandcamp usually encodes in mp3/128bit
+			// and we need to convert into millisec (setTimeout)
+			var time = Math.floor((size * 8) / 128)
+
+			setTimeout(callback, time)
+		})
 }
 
 module.exports = {
 	playable: isBandcampURL,
-	play: stream
+	stream: stream
 }
 

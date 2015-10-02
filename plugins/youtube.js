@@ -13,7 +13,7 @@ function streamUrl (url, callback) {
 		setTimeout(callback, info.length_seconds * 1000)
 	})
 
-	return { stdout : stream }
+	return stream
 }
 
 function isYouTubeUrl (url) {
@@ -22,6 +22,6 @@ function isYouTubeUrl (url) {
 }
 
 module.exports = {
-	play:      streamUrl,
+	stream:      streamUrl,
 	playable : isYouTubeUrl
 }

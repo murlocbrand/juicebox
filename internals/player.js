@@ -3,13 +3,8 @@ var exec = require('child_process').exec
 var fs = require('fs')
 
 // Which program we use to play audio.
+// Defined to be first program which passes 'check'.
 var player = undefined
-
-// Because some process killing is dangerous.
-process.on('uncaughtException', function(err) { 
-        console.log('deal with it', err) 
-	console.log(err.stack)
-})        
 
 // Function to check if host can access a specific program.
 // Requires 'which' unix tool to work (i.e doesn't work on windows)

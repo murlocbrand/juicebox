@@ -6,6 +6,7 @@ var app = express()
 var player = require('./internals').player
 
 var plugins = require('./plugins')
+var preprocessors = require('./preprocessors')
 
 var queue = []
 
@@ -13,7 +14,33 @@ var queue = []
 // mess with the currently playing track.
 var currentId = 'undefined-sequence'
 
-var onEnd = function () {
+// Somewhat dangerous but necessary due to how ytdl works
+// and how /next route kills pipes that are still in use.
+// TODO: Kill both source and drain (not just drain).
+process.on('uncaughtException', function (err) {
+	var safeErrors = [
+		"status code 302",	// ytdl-core when google is lame
+		"read ECONNRESET",	// player.kill() on /next (pipe)
+		"Could not extract signature deciphering actions"
+	]
+
+	console.log(err.message, safeErrors.indexOf(err.message))
+
+	// If it's an error we can't handle, then fuck it: bail away
+	if (safeErrors.indexOf(err.message) === -1) {
+		console.error(err)
+		console.log(err.stack)
+		process.exit(1)
+	}
+
+	// ECONNRESET is triggered by us, not intentionally, but to play next
+	// track. If we did onEnd()/stop() on it as well we'd be skipping tracks
+	// and maybe doing chain reaction stuff.
+	else if (err !== safeErrors[1])
+		player.stop()	
+})
+
+function onEnd () {
 	if (queue.length === 0) {
 		if (player.playing())
 			player.stop()
@@ -46,10 +73,15 @@ var onEnd = function () {
 		currentId = Math.floor(Math.random() * 100000).toString(16)
 		var thisId = currentId
 
-		// Each plugin should provide a stdout stream which contain
-		// the audio stream of the track we want to play.
+		// Each plugin provides a stream which contains the audio and
+		// we pipe that stream into the player's input.
+		// This approach relies on player automagically recognizing
+		// codecs and bitrates (if not more things as well). It is,
+		// however, very simple to use.
+		// TODO: Perhaps use audiocogs and node-speaker combination
+		// instead.
 		plugin
-			.play(next, function () {
+			.stream(next, function () {
 				// This function will be called when the plugin
 				// thinks the track is over. The plugin may be
 				// late and we've already started the next track.
@@ -62,7 +94,9 @@ var onEnd = function () {
 					console.log('plugin exited too late', next)
 				}
 			})
-			.stdout.pipe(player.process().stdin)
+			.pipe(player.process().stdin)
+
+		console.log('streaming', next, '(' + thisId + ')')
 	} else {
 		// If we didn't find a plugin to play this track, then skip it.
 		onEnd()
@@ -120,10 +154,25 @@ app.post('/queue', function (req, res) {
 	res.write(req.body.url)
 	res.write('\n')
 	res.end()
+	
+	// Idea here is that a preprocessor will re-queue the track url
+	// so if a preprocessor accepts the url, don't add it here. This
+	// is mainly focused on resolving lists to individual items, e.g
+	// directory listings, youtube playlists, piratradio stations...
+	var preprocessed = false
+	for (var i = 0; i < preprocessors.length; i++) {
+		if (preprocessors[i].evaluate(req.body.url)) {
+			preprocessed = true
+			// break
+		}
+	}
 
-	queue.push(req.body.url)
-	if (queue.length === 1 && !player.playing())
-		onEnd()
+	if (!preprocessed) {
+		queue.push(req.body.url)
+
+		if (queue.length === 1 && !player.playing())
+			onEnd()
+	}
 })
 // TODO: PUT /queue
 // TODO: PUT /queue/:index
