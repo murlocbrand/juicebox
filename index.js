@@ -1,5 +1,6 @@
 // Copyright 2015 Axel Smeets
 var request = require('request'),
+    fs = require('fs'),
     express = require('express')
 
 var app = express()
@@ -8,7 +9,11 @@ var player = require('./internals').player
 var plugins = require('./plugins')
 var preprocessors = require('./preprocessors')
 
-var queue = []
+var queue = [], track = -1
+try {
+	queue = JSON.parse(fs.readFileSync('queue.json'))
+	console.log('read', queue.length, 'tracks from queue.json')
+} catch (e) {}
 
 // Each play has a unique ID to prevent past event callbacks to
 // mess with the currently playing track.
@@ -47,7 +52,10 @@ function onEnd () {
 		return
 	}
 
-	var next = queue.shift()
+	var nextIndex  = (track + 1) % queue.length
+	track = nextIndex
+
+	var next = queue[nextIndex]
 	var plugin
 	for (var i = 0; i < plugins.length; i++) {
 		plugin = plugins[i]
@@ -61,18 +69,19 @@ function onEnd () {
 			player.stop()
 
 		player.start()
+	
+		// TODO: Use some proper ID generation instead of this mess.
+		currentId = Math.floor(Math.random() * 100000).toString(16)
+		var thisId = currentId
 
 		// Either the player exits by itself or the plugin will
 		// forcibly kill it when track is done. It doesn't matter
 		// by which reason the process is killed, so just go next.
 		player.process().on('exit', function () {
+			console.log('player exited', nextIndex, thisId)
 			onEnd()
 		})	
-		
-		// TODO: Use some proper ID generation instead of this mess.
-		currentId = Math.floor(Math.random() * 100000).toString(16)
-		var thisId = currentId
-
+	
 		// Each plugin provides a stream which contains the audio and
 		// we pipe that stream into the player's input.
 		// This approach relies on player automagically recognizing
@@ -88,15 +97,15 @@ function onEnd () {
 				// If the plugin killed the player we'd start a
 				// chain reaction of process killing.
 				if (thisId === currentId) {
-					console.log('plugin exited in time', next)
+					console.log('plugin exited in time', nextIndex, thisId)
 					player.stop()
 				} else {
-					console.log('plugin exited too late', next)
+					console.log('plugin exited too late', nextIndex, thisId)
 				}
 			})
 			.pipe(player.process().stdin)
 
-		console.log('streaming', next, '(' + thisId + ')')
+		console.log('streaming', nextIndex, '(' + thisId + ')')
 	} else {
 		// If we didn't find a plugin to play this track, then skip it.
 		onEnd()
@@ -170,8 +179,13 @@ app.post('/queue', function (req, res) {
 	if (!preprocessed) {
 		queue.push(req.body.url)
 
-		if (queue.length === 1 && !player.playing())
+		if (track === -1 && !player.playing())
 			onEnd()
+		
+		fs.writeFile('queue.json', JSON.stringify(queue), function (err) {
+			if (err)
+				console.warn('error writing queue to file', err)
+		})
 	}
 })
 // TODO: PUT /queue
