@@ -39,11 +39,13 @@ function start () {
 
 	instance = spawn(player, [
 		'-autoexit',	// autoexit when stdin is empty (not 100% acc.)
-		'-vn',		// no video
-		'-nodisp',	// no display
-		'-i', 		// set input
-		'pipe:0'	// to stdin
-	])
+		'-nodisp',	// pls no window, ok ty
+		'-'		// read from stdin
+	], {
+		// Since node 0.9.5 we must make sure that data on stderr/stdout
+		// is piped to /dev/null or buffers become filled and block.
+		stdio: ['pipe', 'ignore', 'ignore']
+	})
 
 	return instance
 }
