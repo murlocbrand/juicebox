@@ -1,0 +1,17 @@
+[playqueue]
+# Whether the current play queue is persisted between restarts
+persist = true
+
+# Where should the play queue be stored
+path = "queue.json"
+
+[playlist]
+# Do we allow RESTful playlists?
+# The playlist feature allows file creation inside your computer. Only enable
+# it on safe networks, or you may yourself running out of hdd space :>
+enabled = true
+
+# Root folder where playlists are stored.
+# Giving folder ~/playlists will store lists as ~/playlists/*.json
+# Relative paths are from the pwd of the terminal which started juicebox.
+root = "./playlists/"

@@ -1,19 +1,38 @@
 // Copyright 2015 Axel Smeets
 var request = require('request'),
     fs = require('fs'),
-    express = require('express')
+    express = require('express'),
+    toml = require('toml')
 
 var app = express()
-var player = require('./internals').player
+app.set('json spaces', 4)
 
-var plugins = require('./plugins')
+var conf = {}
+
+try {
+	conf = toml.parse(fs.readFileSync('config.toml'))
+} catch (e) {
+	console.error("Error parsing 'config.toml' on", e.line + ':' + e.column)
+	console.error(e.message)
+	process.exit(1)
+}
+
+var internals = require('./internals')
+
+// Human url --> Audio track processors
 var preprocessors = require('./preprocessors')
 
-var queue = []
-try {
-	queue = JSON.parse(fs.readFileSync('queue.json'))
-	console.log('read', queue.length, 'tracks from queue.json')
-} catch (e) {}
+// Audio track --> Audio stream processors
+var plugins = require('./plugins')
+
+// Audio player { play, stop, playing, process }
+var player = internals.player
+
+// Play queue { peek, pop, length, router }
+var queue = internals.playqueue(conf, preprocessors)
+
+// Playlist router
+var playlists = internals.playlist(conf)
 
 // Each play has a unique ID to prevent past event callbacks to
 // mess with the currently playing track.
@@ -53,7 +72,7 @@ function onEnd () {
 	}
 
 	// currently playing is always index 0
-	var next = queue[0]
+	var next = queue.peek()
 	var plugin
 	for (var i = 0; i < plugins.length; i++) {
 		plugin = plugins[i]
@@ -79,7 +98,7 @@ function onEnd () {
 			console.log('player exited',  thisId)
 			// Push the track we just played onto the queue tail to
 			// get a circular, 0-is-current play queue.
-			queue.push(queue.shift())
+			queue.pop()
 			onEnd()
 		})	
 	
@@ -109,15 +128,14 @@ function onEnd () {
 		console.log('streaming', '(' + thisId + ')')
 	} else {
 		// If we didn't find a plugin to play this track, then skip it.
+		queue.pop()
 		onEnd()
 	}
 }
 
-app.use(require('body-parser').json())
-
 // On the index page we provide some status information.
 app.get('/', function (req, res) {
-	res.write('player: ' + player.program() + '\n')
+	res.write('player:        ' + player.program() + '\n')
 
 	res.write('player status: ')
 	if (player.playing()) {
@@ -128,69 +146,45 @@ app.get('/', function (req, res) {
 	}
 	res.write('\n')
 
+	res.write('\n')
 	res.write('in play queue: ')
-	if (queue.length === 0)
+	if (queue.length() === 0)
 		res.write('empty')
-	else {
-		res.write(queue.length.toString())
-		res.write('\n')
-
-		for (var i = 0; i < queue.length; i++)
-			res.write(i + ': ' + queue[i] + '\n')
-	}
+	else
+		res.write(queue.length().toString())
 	res.write('\n')
 
+	res.write('\n')
+	res.write('routes:\n')
+	res.write('-------------------------------------------\n')
+	;[ 
+		'play next track:          /next',
+		'',
+		'inspect play queue:       /queue',
+		'get specific queue index: /queue/:index',
+		'',
+		'list all playlists:       /playlist',
+		'view a specific playlist: /playlist/:index'
+	].forEach(function (line) {
+		res.write(line)
+		res.write('\n')
+	})
+	
 	res.end()
 })
 
 // A hacky control route to force next track.
 app.get('/next', function (req, res) {
-	res.send('requesting next track')
+	res.redirect('/')
 	if (player.playing())
 		player.stop()
 	else
 		onEnd()
 })
 
-// We want the queue to be a RESTful resource
-app.get('/queue', function (req, res) {
-	res.json(queue).end()
-})
-// TODO: GET /queue/:index
+app.use('/queue', queue.router)
 
-// Convenience route for adding tracks
-app.post('/queue', function (req, res) {
-	res.write('adding ')
-	res.write(req.body.url)
-	res.write('\n')
-	res.end()
-	
-	// Idea here is that a preprocessor will re-queue the track url
-	// so if a preprocessor accepts the url, don't add it here. This
-	// is mainly focused on resolving lists to individual items, e.g
-	// directory listings, youtube playlists, piratradio stations...
-	var preprocessed = false
-	for (var i = 0; i < preprocessors.length; i++) {
-		if (preprocessors[i].evaluate(req.body.url)) {
-			preprocessed = true
-			// break
-		}
-	}
-
-	if (!preprocessed) {
-		queue.push(req.body.url)
-
-		if (queue.length === 1 && !player.playing())
-			onEnd()
-		
-		fs.writeFile('queue.json', JSON.stringify(queue), function (err) {
-			if (err)
-				console.warn('error writing queue to file', err)
-		})
-	}
-})
-// TODO: PUT /queue
-// TODO: PUT /queue/:index
+app.use('/playlist', playlists)
 
 app.listen(8888, function () {
     console.log('juicebox listening on 8888')
