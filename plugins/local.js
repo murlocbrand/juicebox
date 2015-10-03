@@ -30,12 +30,10 @@ function isLocalUri (uri) {
 	}
 }
 
-function streamFile (path, callback) {
-	// It has been decided that due to the -autoexit flag on av/ffplay
-	// this callback can be ignored, because av/ffplay will suicide. :]
+function streamFile (path) {
 	var stream = fs.createReadStream(path)
 	
-	// But if for some reason shit goes down, don't leave my people hanging
+	// If for some reason shit goes down, don't leave my people hanging
 	stream.on('error', function (err) {
 		console.error(err)
 		callback()

@@ -37,10 +37,6 @@ var playlists = internals.playlist(conf)
 // Interface for misc actions (not /next)
 var interface = internals.interface
 
-// Each play has a unique ID to prevent past event callbacks to
-// mess with the currently playing track.
-var currentId = 'undefined-sequence'
-
 // Somewhat dangerous but necessary due to how ytdl works
 // and how /next route kills pipes that are still in use.
 // TODO: Kill both source and drain (not just drain).
@@ -50,8 +46,6 @@ process.on('uncaughtException', function (err) {
 		"read ECONNRESET",	// player.kill() on /next (pipe)
 		"Could not extract signature deciphering actions"
 	]
-
-	console.log(err.message, safeErrors.indexOf(err.message))
 
 	// If it's an error we can't handle, then fuck it: bail away
 	if (safeErrors.indexOf(err.message) === -1) {
@@ -90,15 +84,11 @@ function onEnd () {
 
 		player.start()
 	
-		// TODO: Use some proper ID generation instead of this mess.
-		currentId = Math.floor(Math.random() * 100000).toString(16)
-		var thisId = currentId
-
 		// Either the player exits by itself or the plugin will
 		// forcibly kill it when track is done. It doesn't matter
 		// by which reason the process is killed, so just go next.
 		player.process().on('exit', function () {
-			console.log('player exited',  thisId)
+			console.log((new Date()).toString(), 'player exited')
 			// Push the track we just played onto the queue tail to
 			// get a circular, 0-is-current play queue.
 			queue.pop()
@@ -108,27 +98,15 @@ function onEnd () {
 		// Each plugin provides a stream which contains the audio and
 		// we pipe that stream into the player's input.
 		// This approach relies on player automagically recognizing
-		// codecs and bitrates (if not more things as well). It is,
-		// however, very simple to use.
+		// codecs and bitrates (if not more things as well). 
+		// It is simple but very simple to use.
 		// TODO: Perhaps use audiocogs and node-speaker combination
 		// instead.
 		plugin
-			.stream(next, function () {
-				// This function will be called when the plugin
-				// thinks the track is over. The plugin may be
-				// late and we've already started the next track.
-				// If the plugin killed the player we'd start a
-				// chain reaction of process killing.
-				if (thisId === currentId) {
-					console.log('plugin exited in time', thisId)
-					player.stop()
-				} else {
-					console.log('plugin exited too late', thisId)
-				}
-			})
+			.stream(next)
 			.pipe(player.process().stdin)
 
-		console.log('streaming', '(' + thisId + ')')
+		console.log('streaming', '(' + next + ')')
 	} else {
 		// If we didn't find a plugin to play this track, then skip it.
 		queue.pop()
@@ -148,7 +126,6 @@ app.get('/status', function (req, res) {
 	res.write('player status: ')
 	if (player.playing()) {
 		res.write('playing')
-		res.write(' (' + currentId + ')')
 	} else {
 		res.write('stopped/ready')
 	}
