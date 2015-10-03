@@ -9,7 +9,7 @@ Plugin-based url processing system that converts uri to audio.
 ## features
  - all communication with the server relies on json
  - looping play queue, exposed as a RESTful resource
- - play audio from bandcamp, youtube and piratradio
+ - play audio from your local library, bandcamp, youtube and piratradio
 
 ## installation
  1 either `ffplay` or `avplay` installed and on path.  
@@ -69,6 +69,8 @@ curl localhost:8888/next
  - youtube (youtube.com/watch?v=olala)
  - bandcamp (bandcamp.com/album/yayaya | bandcamp.com/track/nanana )
  - piratradio (piratrad.io/stationurl)
+ - local uri (/home/bathman/Music/CoolAlbum/CoolTraK.mp3)
+   (mp3/flac confirmed, but should play all ffmpeg/avconv-supported formats)
 
 ## special urls
  - bandcamp mp3 urls (popplers5.bandcamp.com)
