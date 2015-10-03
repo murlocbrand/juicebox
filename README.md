@@ -1,10 +1,10 @@
 # juicebox
-juicebox is an extremely simple media server that can stream audio.
+juicebox is an extremely simple media server that can play audio from various sources.
 
 ## concept
-server that you interact with via RESTful HTTP requests.  
-will be able to play audio from many sources, most notably from your own collection.  
-you queue a track url and juicebox will stream from that url provided a plugin supports it.  
+It is as server that exposes functions and data over HTTP.  
+Put it in your bathroom, car, boombox or music vehicle of choice.  
+Plugin-based url processing system that converts uri to audio.  
 
 ## features
  - all communication with the server relies on json
@@ -29,7 +29,9 @@ the config file should be fairly self-explaining and have sensible defaults.
 run juicebox: `cd juicebox && node ./index.js`
 
 ## usage
-juicebox serves a status page at `localhost:8888`  
+the index page (/) contains some controls for easy control.
+
+juicebox serves a status page at `localhost:8888/status`  
 
 *adding tracks to queue:*  
 ```
@@ -53,9 +55,15 @@ curl localhost:8888/queue/0 | jq
 curl localhost:8888/playlist | jq
 ```
 
+*did you say shuffle?:*
+```
+curl localhost:8888/shuffle
+```
+
 ## supported urls
  - youtube (youtube.com/watch?v=olala)
  - bandcamp (bandcamp.com/album/yayaya | bandcamp.com/track/nanana )
+ - piratradio (piratrad.io/stationurl)
 
 ## special urls
  - bandcamp mp3 urls (popplers5.bandcamp.com)
