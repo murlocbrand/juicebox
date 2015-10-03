@@ -33,34 +33,34 @@ the index page (/) contains some controls for easy control.
 
 juicebox serves a status page at `localhost:8888/status`  
 
-*adding tracks to queue:*  
+*adding tracks to queue*  
 ```
 curl -X POST localhost:8888/queue \
 	-H "Content-Type: application/json" \
 	-d "{ 'url' : '<youtube url>' }"
 ```
 
-*what's up next?:*
+*what's up next?*
 ```
 curl localhost:8888/queue | jq
 ```
 
-*what's playing now?:*
+*what's playing now?*
 ```
 curl localhost:8888/queue/0 | jq
 ```
 
-*what are my playlists?:*
+*what are my playlists?*
 ```
 curl localhost:8888/playlist | jq
 ```
 
-*did you say shuffle?:*
+*did you say shuffle?*
 ```
 curl localhost:8888/shuffle
 ```
 
-*huh, this song sucks!:*
+*huh, this song sucks!*
 ```
 curl localhost:8888/next
 ```
