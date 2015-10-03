@@ -1,0 +1,32 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>juicebox ui</title>
+	</head>
+	<body>
+		<a href="/next">play next</a>
+		<a href="/shuffle">shuffle</a>
+		<a href="/status">status</a>
+
+		<input type="text" placeholder="track url" id="track"/>
+		<button id="add">add</button>
+
+		<script>
+			var track = document.getElementById('track')
+			var add = document.getElementById('add')
+
+			add.onclick = function () {
+				var xhr = new XMLHttpRequest()
+
+				xhr.open('POST', '/queue')
+				xhr.onreadystatechange = function () {
+					if (xhr.statusCode === 200 && xhr.readyState === 4) {
+						alert('added track')
+					}
+				}
+				xhr.setRequestHeader('Content-Type', 'application/json')
+				xhr.send(JSON.stringify({ url: track.value }))
+			}
+		</script>
+	</body>
+</html>

@@ -34,6 +34,9 @@ var queue = internals.playqueue(conf, preprocessors)
 // Playlist router
 var playlists = internals.playlist(conf)
 
+// Interface for misc actions (not /next)
+var interface = internals.interface
+
 // Each play has a unique ID to prevent past event callbacks to
 // mess with the currently playing track.
 var currentId = 'undefined-sequence'
@@ -133,8 +136,13 @@ function onEnd () {
 	}
 }
 
-// On the index page we provide some status information.
 app.get('/', function (req, res) {
+	res.set('Content-Header', 'text/html')
+	fs.createReadStream('./public/index.html').pipe(res)
+})
+
+// On the status page we provide some helpful information.
+app.get('/status', function (req, res) {
 	res.write('player:        ' + player.program() + '\n')
 
 	res.write('player status: ')
@@ -159,6 +167,7 @@ app.get('/', function (req, res) {
 	res.write('-------------------------------------------\n')
 	;[ 
 		'play next track:          /next',
+		'shuffle play queue:       /shuffle',
 		'',
 		'inspect play queue:       /queue',
 		'get specific queue index: /queue/:index',
@@ -185,6 +194,8 @@ app.get('/next', function (req, res) {
 app.use('/queue', queue.router)
 
 app.use('/playlist', playlists)
+
+app.use('/', interface)
 
 app.listen(8888, function () {
     console.log('juicebox listening on 8888')
