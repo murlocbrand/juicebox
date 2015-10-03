@@ -60,6 +60,11 @@ curl localhost:8888/playlist | jq
 curl localhost:8888/shuffle
 ```
 
+*huh, this song sucks!:*
+```
+curl localhost:8888/next
+```
+
 ## supported urls
  - youtube (youtube.com/watch?v=olala)
  - bandcamp (bandcamp.com/album/yayaya | bandcamp.com/track/nanana )
