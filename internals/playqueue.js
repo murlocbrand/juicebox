@@ -28,15 +28,18 @@ function initialize (conf, prep) {
 	preprocessors = prep
 
 	if (pq.persist) {
-		try {
-			queue = JSON.parse(fs.readFileSync(pq.path))
-			console.log('loaded', queue.length, 'tracks into play queue')
-		} catch (e) {
-			console.error('error while loading', pq.path, 'into play queue')
-			console.error(e.message)
-			console.error('edit conf.toml if you wish to disable this feature')
-			process.exit(1)
-		}
+		fs.readFile(pq.path, function (err, content) {
+			if (err) {
+				fs.writeFile(pq.path, '[]', function (mkerr) {
+					if (mkerr)
+						console.log('error creating queue file', pq.path)
+					else
+						console.log('created queue file', pq.path)
+				})
+				content = "[]"
+			}
+			queue = JSON.parse(content)
+		})
 	}
 
 	return { 
@@ -75,6 +78,7 @@ router.put('/', function (req, res) {
 	}
 
 	queue = req.body.queue
+	res.send('Updated').end()
 })
 
 router.put('/:index', function (req, res) {
@@ -95,6 +99,7 @@ router.put('/:index', function (req, res) {
 		index += queue.length
 
 	queue[index] = req.body.url
+	res.send('Updated').end()
 })
 
 router.post('/', function (req, res) {
@@ -107,11 +112,11 @@ router.post('/', function (req, res) {
 
 	var preprocessed = false
 	for (var i = 0; i < preprocessors.length; i++) {
-		preprocessed = preprocessors.evaluate(url) || preprocessed
+		preprocessed = preprocessors[i].evaluate(url) || preprocessed
 	}
 
 	if (preprocessed) {
-		res.status(202).send('Accepted -- Processing').end()
+		res.status(202).send('Preprocessing').end()
 		return
 	}
 
