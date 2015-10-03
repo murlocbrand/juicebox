@@ -1,9 +1,9 @@
 # juicebox
-juicebox is an extremely simple media server that can play audio from various sources.
+juicebox is a simple media server that can play audio from various sources.
 
 ## concept
 It is as server that exposes functions and data over HTTP.  
-Put it in your bathroom, car, boombox or music vehicle of choice.  
+Put it in your bathtub, wagon, boombox or other music vehicle of choice.  
 Plugin-based url processing system that converts uri to audio.  
 
 ## features
