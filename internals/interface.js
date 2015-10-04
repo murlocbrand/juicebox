@@ -1,5 +1,8 @@
 var request = require('request')
 var router = require('express').Router()
+var metadata = {}
+
+router.use(require('body-parser').json())
 
 router.get('/shuffle', function (req, res) {
 	request('http://localhost:8888/queue', function (err, blabla, list) {
@@ -25,4 +28,22 @@ router.get('/shuffle', function (req, res) {
 	})
 })
 
-module.exports = router 
+router.route('/metadata')
+	.get(function (req, res) { 
+		res.json(metadata) 
+	})
+	.put(function (req, res) {
+		metadata = req.body
+		res.send('Updated')
+	})
+
+module.exports = function (conf, preproc, plugins) {
+	return {
+		router:   router,
+		metadata: function (data) {
+			if (data)
+				metadata = data
+			return metadata
+		}
+	}
+}

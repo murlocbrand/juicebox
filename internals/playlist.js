@@ -125,6 +125,6 @@ function setupDisabled () {
 		.all(disabled)
 }
 
-module.exports = function (conf) {
+module.exports = function (conf, preproc, plugins) {
 	return initialize(conf)
 }

@@ -38,7 +38,7 @@ function start () {
 		console.warn('there exists a running player process')
 
 	instance = spawn(player, [
-		'-autoexit',	// autoexit when stdin is empty (not 100% acc.)
+		'-autoexit',	// autoexit when stdin is empty
 		'-nodisp',	// pls no window, ok ty
 		'-'		// read from stdin
 	], {
@@ -52,6 +52,7 @@ function start () {
 
 // Kill process by SIGHUP
 // TODO: Investigate which signal to use. Maybe SIGINT?
+// TODO: Fix plugins piping data into this process crashing when stream closes.
 function kill () {
 	if (instance)
 		instance.kill('SIGHUP')
@@ -59,15 +60,19 @@ function kill () {
 	instance = undefined
 }
 
-// Only ffplay and avplay are supported due to their extreme similarity :>
-// TODO: Add mplayer/mpd/.. and their associated options
-check('ffplay')
-check('avplay')
 
-module.exports = {
-	start:   start,
-	stop:    kill,
-	playing: function () { return instance !== undefined },
-	program: function () { return player },
-	process: function () { return instance }
+
+module.exports = function (conf, preproc, plugins) {
+	// Only ffplay and avplay are supported due to their extreme similarity :>
+	// TODO: Add mplayer/mpd/.. and their associated options
+	check('ffplay')
+	check('avplay')
+
+	return {
+		start:   start,
+		stop:    kill,
+		playing: function () { return instance !== undefined },
+		program: function () { return player },
+		process: function () { return instance }
+	}
 }

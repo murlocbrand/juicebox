@@ -5,8 +5,13 @@ function streamUrl (url) {
 }
 
 function isYouTubeUrl (url) {
-	// The be playable we need the url to be 1) on youtube 2) have a video
-	return url.indexOf('youtube.com') > 0 && url.indexOf('?v=') > 0
+	// The standard url must 1) be on youtube 2) have a video.
+	var isLong = url.indexOf('youtube.com') > 0 && url.indexOf('?v=') > 0
+	
+	// There also exists a short form: youtu.be/videoId
+	var isShort = url.indexOf('youtu.be') > 0
+
+	return isLong || isShort
 }
 
 module.exports = {

@@ -26,16 +26,16 @@ var preprocessors = require('./preprocessors')
 var plugins = require('./plugins')
 
 // Audio player { play, stop, playing, process }
-var player = internals.player
+var player = internals.player(conf, preprocessors, plugins)
 
 // Play queue { peek, pop, length, router }
-var queue = internals.playqueue(conf, preprocessors)
+var queue = internals.playqueue(conf, preprocessors, plugins)
 
 // Playlist router
-var playlists = internals.playlist(conf)
+var playlists = internals.playlist(conf, preprocessors, plugins)
 
 // Interface for misc actions (not /next)
-var interface = internals.interface
+var interface = internals.interface(conf, preprocessors, plugins)
 
 // Somewhat dangerous but necessary due to how ytdl works
 // and how /next route kills pipes that are still in use.
@@ -70,10 +70,11 @@ function onEnd () {
 
 	// currently playing is always index 0
 	var next = queue.peek()
+	var data = queue.metadata()
 	var plugin
 	for (var i = 0; i < plugins.length; i++) {
 		plugin = plugins[i]
-		if (plugin.playable(next))
+		if (plugin.playable(next, data))
 			break
 		plugin = undefined
 	}
@@ -88,7 +89,7 @@ function onEnd () {
 		// forcibly kill it when track is done. It doesn't matter
 		// by which reason the process is killed, so just go next.
 		player.process().on('exit', function () {
-			console.log((new Date()).toString(), 'player exited')
+			console.log((new Date()).toString(), 'player finished playing')
 			// Push the track we just played onto the queue tail to
 			// get a circular, 0-is-current play queue.
 			queue.pop()
@@ -105,6 +106,8 @@ function onEnd () {
 		plugin
 			.stream(next)
 			.pipe(player.process().stdin)
+		
+		interface.metadata(data || {})
 
 		console.log('streaming', '(' + next + ')')
 	} else {
@@ -172,7 +175,7 @@ app.use('/queue', queue.router)
 
 app.use('/playlist', playlists)
 
-app.use('/', interface)
+app.use('/', interface.router)
 
 app.listen(8888, function () {
     console.log('juicebox listening on 8888')

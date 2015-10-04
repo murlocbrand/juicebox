@@ -43,10 +43,11 @@ function initialize (conf, prep) {
 	}
 
 	return { 
-		peek:   function () { return queue[0] },
-		pop:    function () { return queue.push(queue.shift()) },
-		length: function () { return queue.length },
-		router: router
+		peek:     function () { return queue[0].url },
+		metadata: function () { return queue[0].metadata },
+		pop:      function () { return queue.push(queue.shift()) },
+		length:   function () { return queue.length },
+		router:   router
 	}
 }
 
@@ -68,7 +69,7 @@ router.get('/:index', function (req, res) {
 	while (index < 0)
 		index += queue.length
 	
-	res.json({ url: queue[index] })
+	res.json(queue[index])
 })
 
 router.put('/', function (req, res) {
@@ -98,7 +99,10 @@ router.put('/:index', function (req, res) {
 	while (index < 0)
 		index += queue.length
 
-	queue[index] = req.body.url
+	queue[index].url = req.body.url
+	if (req.body.metadata)
+		queue[index].metadata = req.body.metadata
+
 	res.send('Updated').end()
 })
 
@@ -112,7 +116,8 @@ router.post('/', function (req, res) {
 
 	var preprocessed = false
 	for (var i = 0; i < preprocessors.length; i++) {
-		preprocessed = preprocessors[i].evaluate(url) || preprocessed
+		if (preprocessors[i].evaluate(url, req.body.metadata))
+			preprocessed = true
 	}
 
 	if (preprocessed) {
@@ -120,7 +125,10 @@ router.post('/', function (req, res) {
 		return
 	}
 
-	queue.push(url)
+	if (req.body.metadata)
+		queue.push({ url : url, metadata : req.body.metadata })
+	else
+		queue.push({ url : url })
 
 	if (pq.persist) {
 		fs.writeFile(pq.path, JSON.stringify(queue), function (err) {
@@ -132,6 +140,6 @@ router.post('/', function (req, res) {
 	res.status(200).send('Success').end()	
 })
 
-module.exports = function (conf, preprocessors) {
-	return initialize(conf, preprocessors)
+module.exports = function (conf, preproc, plugins) {
+	return initialize(conf, preproc)
 }
