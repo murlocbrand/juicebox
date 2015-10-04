@@ -11,7 +11,7 @@
   "dependencies": {
     "body-parser": "^1.14.1",
     "express": "^4.13.3",
-    "pirate-curl": "^0.1.0",
+    "pirate-curl": "^0.2.0",
     "request": "^2.64.0",
     "toml": "^2.3.0"
   }

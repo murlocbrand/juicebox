@@ -13,7 +13,7 @@ function processUrl (url) {
 		return false
 
 	var station = /http(s?)\:\/\/piratrad\.io\/([a-zA-Z0-9]+)/.exec(url)[2]
-	pcurl(station, function (err, list) {
+	pcurl(station, ['url', 'title'], function (err, list) {
 		if (err)
 			return
 		console.log('piratrad.io', 'preprocessed', url)
@@ -21,13 +21,16 @@ function processUrl (url) {
 			var track = list[i]
 			
 			// No soundcloud support (yet)
-			if (track.indexOf('soundcloud.com') >= 0)
+			if (track.url.indexOf('soundcloud.com') >= 0)
 				continue
 
 			request({
 				url: "http://localhost:8888/queue",
 				method: "POST",
-				json: { url: track }
+				json: { 
+					url: track.url, 
+					metadata: { title: track.title } 
+				}
 			})
 		}
 	})
